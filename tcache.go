@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"time"
+	"os"
 	"net/http"
 	"io/ioutil"
 	"github.com/bradfitz/gomemcache/memcache"
@@ -17,6 +18,20 @@ type cacheItem struct {
 type requestItem struct {
 	Key string
 	Val cacheItem
+}
+
+type listenData struct {
+	Address string
+	Port string
+}
+
+func (d *listenData) Get() string {
+	return d.Address + ":" + d.Port
+}
+
+type listenNames struct {
+	Address string
+	Port string
 }
 
 func cleanCache(cache map[string]cacheItem, c chan requestItem) {
@@ -84,12 +99,13 @@ func requestHandler(w http.ResponseWriter, r *http.Request, cs chan requestItem,
 	}
 }
 
-func listenToRequests(cs chan requestItem, cache map[string]cacheItem, mc *memcache.Client) {
-	fmt.Println("LISTEN")
+func listenToRequests(cs chan requestItem, cache map[string]cacheItem, mc *memcache.Client, listen listenData) {
+	address := listen.Get()
+	fmt.Println("LISTEN: " + address)
 	http.HandleFunc("/", func (w http.ResponseWriter, r *http.Request) {
 		requestHandler(w, r, cs, cache, mc)
 	})
-	http.ListenAndServe(":8081", nil)
+	http.ListenAndServe(address, nil)
 }
 
 func addMsgToCache(cache map[string]cacheItem, cs chan requestItem) {
@@ -102,16 +118,50 @@ func addMsgToCache(cache map[string]cacheItem, cs chan requestItem) {
 	}
 }
 
+func getListen(defaults listenData, names listenNames) listenData {
+	var listenAddress string = os.Getenv(names.Address)
+	var listenPort string = os.Getenv(names.Port)
+	if (listenAddress == "") {
+		listenAddress = defaults.Address
+	}
+
+	if (listenPort == "") {
+		listenPort = defaults.Port
+	}
+
+	return listenData{
+		Address: listenAddress,
+		Port: listenPort,
+	}
+}
+
 func main() {
 	cs := make(chan requestItem)
 
 	cache := make(map[string]cacheItem)
 
-	mc := memcache.New("172.17.0.11:11211")
+	memcacheAddress := getListen(listenData{
+		Address: "127.0.0.1",
+		Port: "11211",
+	}, listenNames{
+		Address: "MEMCACHE_ADDRESS",
+		Port: "MEMCACHE_PORT",
+	})
+
+	webserverAddress := getListen(listenData{
+		Address: "0.0.0.0",
+		Port: "8081",
+	}, listenNames{
+		Address: "LISTEN_ADDRESS",
+		Port: "LISTEN_PORT",
+	})
+
+	fmt.Println("Memcache address: " + memcacheAddress.Get())
+	mc := memcache.New(memcacheAddress.Get())
 
 	go cleanCache(cache, cs)
 
-	go listenToRequests(cs, cache, mc)
+	go listenToRequests(cs, cache, mc, webserverAddress)
 
 	mc.Add(&memcache.Item{
 		Key: "/foo/bar/baz3",
