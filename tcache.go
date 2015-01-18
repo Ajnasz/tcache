@@ -49,11 +49,15 @@ func (c *TCacheCollection) Get(name string) (TCacheItem, bool) {
 	return item, found
 }
 
+func (c *TCacheCollection) Remove(name string) {
+	delete(c.Items, name)
+}
+
 func RemoveExpired(collection *TCacheCollection) {
 	for {
 		for key, item := range collection.Items {
 			if item.IsExpired() {
-				delete(collection.Items, key)
+				collection.Remove(key)
 			}
 		}
 
