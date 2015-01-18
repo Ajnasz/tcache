@@ -20,28 +20,36 @@ type TCollection interface {
 	GetAll() []TCacheItem
 }
 
-type TCacheCCollection struct {
+type TCacheCollection struct {
+	HitCount int
+	MissCount int
 	Items map[string]TCacheItem
 }
 
-func (c *TCacheCCollection) Add(item TCacheItem) {
+func (c *TCacheCollection) Add(item TCacheItem) {
 	c.Items[item.Name] = item
 }
 
-func (c *TCacheCCollection) GetAll() map[string]TCacheItem {
+func (c *TCacheCollection) GetAll() map[string]TCacheItem {
 	return c.Items
 }
 
-func (c *TCacheCCollection) Get(name string) (TCacheItem, bool) {
+func (c *TCacheCollection) Get(name string) (TCacheItem, bool) {
 	var found bool = false
 	var item TCacheItem
 
 	item, found = c.Items[name]
 
+	if (found) {
+		c.HitCount++
+	} else {
+		c.MissCount++
+	}
+
 	return item, found
 }
 
-func RemoveExpired(collection *TCacheCCollection) {
+func RemoveExpired(collection *TCacheCollection) {
 	for {
 		for key, item := range collection.Items {
 			if item.IsExpired() {
@@ -53,10 +61,10 @@ func RemoveExpired(collection *TCacheCCollection) {
 	}
 }
 
-func CreateCache() *TCacheCCollection {
+func CreateCache() *TCacheCollection {
 	items := make(map[string]TCacheItem)
 
-	collection := TCacheCCollection{
+	collection := TCacheCollection{
 		Items: items,
 	}
 

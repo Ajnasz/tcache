@@ -7,7 +7,7 @@ import (
 	"reflect"
 )
 
-func fillCollection(collection *TCacheCCollection) {
+func fillCollection(collection *TCacheCollection) {
 	now := time.Now()
 
 	collection.Add(TCacheItem{
