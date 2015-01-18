@@ -1,14 +1,30 @@
 Experimental library in go
 
 ```go
+package main
 
-cache := tcache.CreateCache()
+import (
+	"fmt"
+	"time"
+	"github.com/ajnasz/tcache"
+)
 
-cache.Add(tcache.CacheItem{
-	Name: "Foobar",
-	Value: []byte("BazQux"),
-	Expire: time.Now().Add(5 * time.Second),
-})
+func main() {
+	var cache *tcache.TCacheCollection
+	cache = tcache.CreateCache()
 
-cacheItem, found := cache.Get("Foobar")
+	cache.Add(tcache.TCacheItem{
+		Name: "Foobar",
+		Value: []byte("BazQux"),
+		Expire: time.Now().Add(5 * time.Second),
+	})
+
+	cacheItem, found := cache.Get("Foobar")
+
+	if found {
+		fmt.Println(string(cacheItem.Value))
+	} else {
+		fmt.Println("Not found in cache")
+	}
+}
 ```
