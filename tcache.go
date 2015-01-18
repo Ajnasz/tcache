@@ -1,79 +1,66 @@
 package tcache
 
-import (
-	"fmt"
+import(
 	"time"
 )
 
-const MSG_HIT byte = 1
-const MSG_MISS byte = 0
-const MSG_DELETED byte = 2
-
-type CacheItem struct {
+type TCacheItem struct {
+	Name string
 	Value []byte
-	Created time.Time
-	Expire time.Duration
+	Expire time.Time
 }
 
-type CacheItemCollection struct {
-	channel chan byte
-	HitCount int
-	MissCount int
-	Items map[string]CacheItem
+func (item *TCacheItem) IsExpired() bool {
+	return item.Expire.UnixNano() / int64(time.Millisecond) < time.Now().UnixNano() / int64(time.Millisecond)
 }
 
-func (collection *CacheItemCollection) Add(key string, item CacheItem) {
-	collection.Items[key] = item
+type TCollection interface {
+	Add(TCacheItem) TCacheItem
+	Get(string) (TCacheItem, bool)
+	GetAll() []TCacheItem
 }
 
-func (collection *CacheItemCollection) Remove(key string) {
-	delete(collection.Items, key)
+type TCacheCCollection struct {
+	Items map[string]TCacheItem
 }
 
-func (collection *CacheItemCollection) Get(key string) (CacheItem, bool) {
-	val, ok := collection.Items[key]
-
-	if (ok) {
-		collection.channel <- MSG_HIT
-		collection.HitCount++
-	} else {
-		collection.channel <- MSG_MISS
-		collection.MissCount++
-	}
-
-	return val, ok
+func (c *TCacheCCollection) Add(item TCacheItem) {
+	c.Items[item.Name] = item
 }
 
-func cleanCache(collection CacheItemCollection, cs chan byte) {
+func (c *TCacheCCollection) GetAll() map[string]TCacheItem {
+	return c.Items
+}
+
+func (c *TCacheCCollection) Get(name string) (TCacheItem, bool) {
+	var found bool = false
+	var item TCacheItem
+
+	item, found = c.Items[name]
+
+	return item, found
+}
+
+func RemoveExpired(collection *TCacheCCollection) {
 	for {
 		for key, item := range collection.Items {
-			if item.Created.Add(item.Expire).Unix() < time.Now().Unix() {
-				collection.Remove(key)
-				cs <- MSG_DELETED
+			if item.IsExpired() {
+				delete(collection.Items, key)
 			}
 		}
+
 		time.Sleep(100 * time.Millisecond)
 	}
 }
 
-func CreateCache(cs chan byte) CacheItemCollection{
+func CreateCache() *TCacheCCollection {
+	items := make(map[string]TCacheItem)
 
-	var c = CacheItemCollection{
-		channel: cs,
-		Items: make(map[string]CacheItem),
+	collection := TCacheCCollection{
+		Items: items,
 	}
 
-	fmt.Println(c.Items)
+	go RemoveExpired(&collection)
 
-	go cleanCache(c, cs)
-
-	go func () {
-		for {
-			select {
-				case <-cs:
-			}
-		}
-	}()
-
-	return c
+	return &collection
 }
