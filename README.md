@@ -4,7 +4,7 @@ Experimental library in go
 
 cache := tcache.CreateCache()
 
-cache.Add("Foobar", tcache.CacheItem{
+cache.Add(tcache.CacheItem{
 	Name: "Foobar",
 	Value: []byte("BazQux"),
 	Expire: time.Now().Add(5 * time.Second),
