@@ -2,11 +2,13 @@ Experimental library in go
 
 ```go
 
-cs := make(chan byte, 1000)
-cache := tcache.CreateCache(cs)
+cache := tcache.CreateCache()
 
 cache.Add("Foobar", tcache.CacheItem{
+	Name: "Foobar",
 	Value: []byte("BazQux"),
-	Created: time.Now(),
-	Expire: 5 * time.Second,
+	Expire: time.Now().Add(5 * time.Second),
 })
+
+cacheItem, found := cache.Get("Foobar")
+```
