@@ -54,14 +54,18 @@ func (c *TCacheCollection) Remove(name string) {
 }
 
 func RemoveExpired(collection *TCacheCollection) {
-	for {
-		for key, item := range collection.Items {
-			if item.IsExpired() {
-				collection.Remove(key)
-			}
+	for key, item := range collection.Items {
+		if item.IsExpired() {
+			collection.Remove(key)
 		}
+	}
+}
 
-		time.Sleep(100 * time.Millisecond)
+// Schedules a call of RemoveExpired as frequent as it's specified in freq atribute
+func ScheduleRemoveExpired(collection *TCacheCollection, freq time.Duration) {
+	for {
+		RemoveExpired(collection)
+		time.Sleep(freq)
 	}
 }
 
@@ -72,7 +76,7 @@ func CreateCache() *TCacheCollection {
 		Items: items,
 	}
 
-	go RemoveExpired(&collection)
+	go ScheduleRemoveExpired(&collection, 100 * time.Millisecond)
 
 	return &collection
 }
