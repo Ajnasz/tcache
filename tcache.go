@@ -2,7 +2,7 @@
 // given amount of time
 package tcache
 
-import(
+import (
 	"time"
 )
 
@@ -11,28 +11,32 @@ import(
 // Values should be the actual value
 // Expire should be a time when the cache expired
 type TCacheItem struct {
-	Name string
-	Value []byte
+	Name   string
+	Value  []byte
 	Expire time.Time
 }
 
 // IsExpired returns true, if current Now() is later than the time was defined
 // in Expire
 func (item *TCacheItem) IsExpired() bool {
-	return item.Expire.UnixNano() / int64(time.Millisecond) < time.Now().UnixNano() / int64(time.Millisecond)
+	return item.Expire.UnixNano()/int64(time.Millisecond) < time.Now().UnixNano()/int64(time.Millisecond)
 }
 
 type TCollection interface {
-	Add(TCacheItem) TCacheItem
+	Add(TCacheItem)
 	Get(string) (TCacheItem, bool)
-	GetAll() []TCacheItem
+	HitCount() int
+	Hit()
+	Miss()
+	MissCount() int
+	GetAll() map[string]TCacheItem
 }
 
 // TCacheCollection is a struct which stores the cache items
 type TCacheCollection struct {
-	HitCount int
-	MissCount int
-	Items map[string]TCacheItem
+	hitCount  int
+	missCount int
+	Items     map[string]TCacheItem
 }
 
 // Add adds a new item to the cache
@@ -45,18 +49,28 @@ func (c *TCacheCollection) GetAll() map[string]TCacheItem {
 	return c.Items
 }
 
+// Increases the hitCount field
+func (c *TCacheCollection) Hit() {
+	c.hitCount += 1
+}
+
+// Increases the missCount field
+func (c *TCacheCollection) Miss() {
+	c.missCount += 1
+}
+
 // Returns one specific item from the cache
-// Also increments HitCount or MissCount
+// Also increments hitCount or MissCount
 func (c *TCacheCollection) Get(name string) (TCacheItem, bool) {
 	var found bool = false
 	var item TCacheItem
 
 	item, found = c.Items[name]
 
-	if (found) {
-		c.HitCount++
+	if found {
+		c.Hit()
 	} else {
-		c.MissCount++
+		c.Miss()
 	}
 
 	return item, found
@@ -65,6 +79,16 @@ func (c *TCacheCollection) Get(name string) (TCacheItem, bool) {
 // Removes item from cache
 func (c *TCacheCollection) Remove(name string) {
 	delete(c.Items, name)
+}
+
+// Returns how many times was found an item in cache
+func (c *TCacheCollection) HitCount() int {
+	return c.hitCount
+}
+
+// Returns how many times was not found item in cache
+func (c *TCacheCollection) MissCount() int {
+	return c.missCount
 }
 
 // Removes expired cache items from TCacheCollection
@@ -87,14 +111,14 @@ func ScheduleRemoveExpired(collection *TCacheCollection, freq time.Duration) {
 // Creates a cache collections
 // Calls ScheduleRemoveExpired to remove expired items in every 100
 // milliseconds
-func CreateCache() *TCacheCollection {
+func CreateCache() TCollection {
 	items := make(map[string]TCacheItem)
 
-	collection := TCacheCollection{
+	collection := &TCacheCollection{
 		Items: items,
 	}
 
-	go ScheduleRemoveExpired(&collection, 100 * time.Millisecond)
+	go ScheduleRemoveExpired(collection, 100*time.Millisecond)
 
-	return &collection
+	return collection
 }

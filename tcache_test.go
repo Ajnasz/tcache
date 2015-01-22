@@ -1,50 +1,23 @@
 package tcache
 
 import (
+	"strconv"
 	"testing"
 	"fmt"
 	"time"
-	"reflect"
 )
 
-func fillCollection(collection *TCacheCollection) {
+func fillCollection(collection TCollection) {
 	now := time.Now()
 
-	collection.Add(TCacheItem{
-		"First",
-		[]byte("Expires right now"),
-		now,
-	})
-
-	collection.Add(TCacheItem{
-		"Second",
-		[]byte("Expires 1 second later"),
-		now.Add(time.Second),
-	})
-
-	collection.Add(TCacheItem{
-		"Second",
-		[]byte("Expires 2 second later"),
-		now.Add(2 * time.Second),
-	})
-
-	collection.Add(TCacheItem{
-		"Third",
-		[]byte("Expires 3 second later"),
-		now.Add(3 * time.Second),
-	})
-
-	collection.Add(TCacheItem{
-		"Fourth",
-		[]byte("Expires 4 second later"),
-		now.Add(4 * time.Second),
-	})
-
-	collection.Add(TCacheItem{
-		"Fifth",
-		[]byte("Expires 5 second later"),
-		now.Add(5 * time.Second),
-	})
+	for i := 0; i < 5; i += 1 {
+		delay := time.Duration(i) * time.Second
+		collection.Add(TCacheItem{
+			"Item-" + strconv.Itoa(i),
+			[]byte("Expires " + strconv.Itoa(i) + " seconds later"),
+			now.Add(delay),
+		})
+	}
 }
 
 func TestGetItem(t *testing.T) {
@@ -52,13 +25,13 @@ func TestGetItem(t *testing.T) {
 
 	fillCollection(collection)
 
-	item, found := collection.Get("First")
+	item, found := collection.Get("Item-0")
 
 	if !found {
 		t.Error("First item not found")
 	}
 
-	if (item.Name != "First" || string(item.Value) != "Expires right now") {
+	if (item.Name != "Item-0" || string(item.Value) != "Expires 0 seconds later") {
 		t.Error("First item is not the elem I expected")
 	}
 }
@@ -68,7 +41,7 @@ func TestGetAll(t *testing.T) {
 
 	fillCollection(collection)
 
-	if (!reflect.DeepEqual(collection.Items, collection.GetAll())) {
+	if (len(collection.GetAll()) != 5) {
 		t.Error("collection.Items not the same as collection.GetAll()")
 	}
 }
@@ -114,7 +87,7 @@ func TestRemoveExpired(t *testing.T) {
 
 	fillCollection(collection)
 
-	if _, found := collection.Get("First"); !found {
+	if _, found := collection.Get("Item-0"); !found {
 		t.Error("First item not found after RemoveExpired started")
 	}
 
@@ -124,7 +97,7 @@ func TestRemoveExpired(t *testing.T) {
 
 	time.Sleep(time.Second)
 
-	if _, found := collection.Get("First"); found {
+	if _, found := collection.Get("Item-0"); found {
 		t.Error("First item not removed")
 	}
 
@@ -132,14 +105,14 @@ func TestRemoveExpired(t *testing.T) {
 		t.Error("Collection length should be 4")
 	}
 
-	time.Sleep(1100 * time.Millisecond)
+	time.Sleep(time.Second)
 
 	if _, found := collection.Get("Second"); found {
 		t.Error("Second item not removed")
 	}
 
-	if len(collection.GetAll()) != 3 {
-		t.Error("Collection length should be 3")
+	if l := len(collection.GetAll()); l != 3 {
+		t.Error("Collection length should be 3, but it's", l)
 	}
 }
 
