@@ -1,9 +1,9 @@
 package tcache
 
 import (
+	"fmt"
 	"strconv"
 	"testing"
-	"fmt"
 	"time"
 )
 
@@ -31,7 +31,7 @@ func TestGetItem(t *testing.T) {
 		t.Error("First item not found")
 	}
 
-	if (item.Name != "Item-0" || string(item.Value) != "Expires 0 seconds later") {
+	if item.Name != "Item-0" || string(item.Value) != "Expires 0 seconds later" {
 		t.Error("First item is not the elem I expected")
 	}
 }
@@ -41,7 +41,7 @@ func TestGetAll(t *testing.T) {
 
 	fillCollection(collection)
 
-	if (len(collection.GetAll()) != 5) {
+	if len(collection.GetAll()) != 5 {
 		t.Error("collection.Items not the same as collection.GetAll()")
 	}
 }
@@ -57,7 +57,7 @@ func TestAddItem(t *testing.T) {
 		time.Now().Add(time.Second),
 	})
 
-	if (originalLength >= len(collection.GetAll())) {
+	if originalLength >= len(collection.GetAll()) {
 		t.Error("Length of items did not change")
 	}
 }
@@ -69,13 +69,13 @@ func TestTCacheItemIsExpired(t *testing.T) {
 		time.Now(),
 	}
 
-	if (item.IsExpired()) {
+	if item.IsExpired() {
 		t.Error("Item expired, but just created it", item)
 	}
 
 	time.Sleep(time.Second)
 
-	if (!item.IsExpired()) {
+	if !item.IsExpired() {
 		t.Error("Item not expired, after 1 second", item)
 	}
 
@@ -138,7 +138,7 @@ func TestConcurrentCaches(t *testing.T) {
 		time.Now().Add(time.Second),
 	})
 
-	if (len(collection1.GetAll()) == len(collection2.GetAll())) {
+	if len(collection1.GetAll()) == len(collection2.GetAll()) {
 		t.Error("collection1 and collection2 has the same length")
 	}
 
