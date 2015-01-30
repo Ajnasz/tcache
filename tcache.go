@@ -3,7 +3,6 @@
 package tcache
 
 import "time"
-import "log"
 
 // TCacheItem represents an item which is stored in the cace
 // Name will be used to acces to a item
