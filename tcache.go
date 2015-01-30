@@ -2,24 +2,24 @@
 // given amount of time
 package tcache
 
-import (
-	"time"
-)
+import "time"
+import "log"
 
 // TCacheItem represents an item which is stored in the cace
 // Name will be used to acces to a item
 // Values should be the actual value
 // Expire should be a time when the cache expired
 type TCacheItem struct {
-	Name   string
-	Value  []byte
-	Expire time.Time
+	Name       string
+	Value      []byte
+	Expire     time.Duration
+	ExpireDate time.Time
 }
 
 // IsExpired returns true, if current Now() is later than the time was defined
 // in Expire
 func (item *TCacheItem) IsExpired() bool {
-	return item.Expire.UnixNano()/int64(time.Millisecond) < time.Now().UnixNano()/int64(time.Millisecond)
+	return item.ExpireDate.UnixNano()/int64(time.Millisecond) < time.Now().UnixNano()/int64(time.Millisecond)
 }
 
 type TCollection interface {
@@ -41,7 +41,14 @@ type TCacheCollection struct {
 
 // Add adds a new item to the cache
 func (c *TCacheCollection) Add(item TCacheItem) {
+	item.ExpireDate = time.Now().Add(item.Expire)
 	c.Items[item.Name] = item
+	go func() {
+		select {
+		case <-time.After(item.Expire):
+			c.Remove(item.Name)
+		}
+	}()
 }
 
 // Returns all items in the cache
@@ -118,7 +125,7 @@ func CreateCache() TCollection {
 		Items: items,
 	}
 
-	go ScheduleRemoveExpired(collection, 100*time.Millisecond)
+	// go ScheduleRemoveExpired(collection, 100*time.Millisecond)
 
 	return collection
 }
